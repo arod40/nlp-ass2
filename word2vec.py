@@ -2,6 +2,7 @@
 
 import argparse
 from collections import defaultdict
+from enum import unique
 from matplotlib.pyplot import axis
 import numpy as np
 import random
@@ -114,29 +115,37 @@ def negSamplingLossAndGradient(
     ### YOUR CODE HERE (~10 Lines)
 
     ### Please use your implementation of sigmoid in here.
-    idxCount = defaultdict(int)
-    for idx in indices:
-        idxCount[idx] += 1
+    uniqueNegSamplePlusOutside = [outsideWordIdx] + list(set(negSampleWordIndices))
 
-    reuseVectors = np.copy(outsideVectors)
-    reuseVectors[negSampleWordIndices] = -outsideVectors[negSampleWordIndices]
-    reuseVectors = 1 - sigmoid(reuseVectors @ centerWordVec)
+    reuseVectors = 1 - sigmoid(
+        np.concatenate(
+            [
+                np.expand_dims(outsideVectors[outsideWordIdx], 0),
+                -outsideVectors[uniqueNegSamplePlusOutside[1:]],
+            ]
+        )
+        @ centerWordVec
+    )
 
     repetitionsVector = np.array(
-        [idxCount[idx] for idx in range(outsideVectors.shape[0])]
+        [indices.count(idx) for idx in uniqueNegSamplePlusOutside]
     )
-    repetitionsVector[outsideWordIdx] = -1
+    repetitionsVector[0] = -1
 
     loss = -np.log(sigmoid(outsideVectors[outsideWordIdx] @ centerWordVec)) - np.sum(
         np.log(sigmoid(-outsideVectors[negSampleWordIndices] @ centerWordVec))
     )
 
     gradCenterVec = (
-        -reuseVectors[outsideWordIdx] * outsideVectors[outsideWordIdx]
+        -reuseVectors[0] * outsideVectors[outsideWordIdx]
         + np.transpose(outsideVectors[negSampleWordIndices])
-        @ reuseVectors[negSampleWordIndices]
+        @ reuseVectors[
+            [uniqueNegSamplePlusOutside.index(idx) for idx in negSampleWordIndices]
+        ]
     )
-    gradOutsideVecs = (
+
+    gradOutsideVecs = np.zeros(outsideVectors.shape)
+    gradOutsideVecs[uniqueNegSamplePlusOutside] = (
         np.expand_dims(repetitionsVector * reuseVectors, 1)
     ) @ np.expand_dims(centerWordVec, 0)
 
