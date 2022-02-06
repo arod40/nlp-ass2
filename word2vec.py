@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 
 import argparse
-from collections import defaultdict
-from enum import unique
-from matplotlib.pyplot import axis
 import numpy as np
 import random
 
